@@ -31,7 +31,8 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
         const runtimeDatabaseUrl = resolveRuntimeDatabaseUrl();
         super({ datasources: { db: { url: runtimeDatabaseUrl } } });
         this.runtimeDatabaseUrl = runtimeDatabaseUrl;
-        if (process.env.VERCEL === '1' && runtimeDatabaseUrl.startsWith('file:/tmp/')) {
+        if (process.env.VERCEL === '1' &&
+            runtimeDatabaseUrl.startsWith('file:/tmp/')) {
             common_1.Logger.log(`Using temporary SQLite database at ${runtimeDatabaseUrl}`, PrismaService_1.name);
         }
     }
@@ -57,7 +58,9 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
             select: { id: true, name: true },
         });
         const roleMap = new Map(roles.map((role) => [role.name, role.id]));
-        if (!roleMap.get('admin') || !roleMap.get('owner') || !roleMap.get('user')) {
+        if (!roleMap.get('admin') ||
+            !roleMap.get('owner') ||
+            !roleMap.get('user')) {
             throw new Error('Default roles are missing and seeding cannot continue.');
         }
         for (const userSeed of DEFAULT_USER_SEEDS) {
@@ -81,7 +84,9 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
         const role = existingRole
             ? existingRole
             : await this.role.create({
-                data: preferredId ? { id: preferredId, name: roleName } : { name: roleName },
+                data: preferredId
+                    ? { id: preferredId, name: roleName }
+                    : { name: roleName },
                 select: { id: true },
             });
         await this.permission.deleteMany({ where: { roleId: role.id } });
@@ -152,12 +157,21 @@ function resolveRuntimeDatabaseUrl() {
     const selectedKey = selectedCandidate?.[0] ?? 'none';
     const isVercelServerless = process.env.VERCEL === '1';
     const isVercelProduction = process.env.VERCEL_ENV === 'production';
+    const allowUnsafeSqliteInProduction = process.env.ALLOW_SQLITE_IN_PRODUCTION === 'true';
     common_1.Logger.log(`Resolved database env key=${selectedKey}`, PrismaService.name);
     if (isVercelServerless && isVercelProduction) {
         if (!configuredUrl) {
+            if (allowUnsafeSqliteInProduction) {
+                common_1.Logger.warn('ALLOW_SQLITE_IN_PRODUCTION=true enabled without DATABASE_URL. Falling back to temporary SQLite at /tmp/dev.db.', PrismaService.name);
+                return 'file:/tmp/dev.db';
+            }
             throw new Error('Set DATABASE_URL (or POSTGRES_PRISMA_URL) to a persistent managed Postgres URL in Vercel production.');
         }
         if (configuredUrl.startsWith('file:')) {
+            if (allowUnsafeSqliteInProduction) {
+                common_1.Logger.warn(`ALLOW_SQLITE_IN_PRODUCTION=true enabled. Using non-persistent SQLite from ${selectedKey} in production.`, PrismaService.name);
+                return normalizeVercelSqliteUrl(configuredUrl);
+            }
             throw new Error(`SQLite file URL from ${selectedKey} is not supported in Vercel production. Use managed Postgres.`);
         }
     }
@@ -167,6 +181,9 @@ function resolveRuntimeDatabaseUrl() {
     if (!isVercelServerless || !configuredUrl.startsWith('file:')) {
         return configuredUrl;
     }
+    return configuredUrl;
+}
+function normalizeVercelSqliteUrl(configuredUrl) {
     const sqlitePath = configuredUrl.slice('file:'.length);
     if (sqlitePath.startsWith('/tmp/')) {
         return configuredUrl;

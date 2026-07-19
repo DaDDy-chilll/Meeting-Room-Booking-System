@@ -156,7 +156,7 @@ cd frontend && npm run lint && npm run build
   - do not use SQLite file URLs like `file:./dev.db` in serverless production
   - set `DATABASE_URL` to your managed Postgres URL (must not be `file:` on Vercel production)
   - set `PORT`, `CORS_ORIGINS`
-  - run `npx prisma migrate deploy`
+  - run `npx prisma db push`
   - start with `npm run start:prod`
 - Frontend (Vercel):
   - set `NEXT_PUBLIC_API_BASE_URL=https://<backend>/api`
