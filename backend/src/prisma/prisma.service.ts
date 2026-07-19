@@ -187,14 +187,17 @@ export class PrismaService
 }
 
 function resolveRuntimeDatabaseUrl(): string {
-  const configuredUrl = process.env.DATABASE_URL?.trim();
+  const configuredUrl =
+    process.env.DATABASE_URL?.trim() ||
+    process.env.POSTGRES_PRISMA_URL?.trim() ||
+    process.env.POSTGRES_URL?.trim();
   const isVercelServerless = process.env.VERCEL === '1';
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isVercelProduction = process.env.VERCEL_ENV === 'production';
 
-  if (isVercelServerless && isProduction) {
+  if (isVercelServerless && isVercelProduction) {
     if (!configuredUrl) {
       throw new Error(
-        'DATABASE_URL must be set to a persistent managed database in production.',
+        'Set DATABASE_URL (or POSTGRES_PRISMA_URL) to a persistent managed Postgres URL in Vercel production.',
       );
     }
 
