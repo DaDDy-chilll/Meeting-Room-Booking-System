@@ -1,0 +1,1 @@
+{"version":3,"file":"create-booking.dto.js","sourceRoot":"","sources":["../../../src/bookings/dto/create-booking.dto.ts"],"names":[],"mappings":";;;;;;;;;;;;AAAA,qDAA4C;AAE5C,MAAa,gBAAgB;IAE3B,SAAS,CAAU;IAGnB,OAAO,CAAU;CAClB;AAND,4CAMC;AAJC;IADC,IAAA,2BAAS,EAAC,EAAE,MAAM,EAAE,IAAI,EAAE,CAAC;;mDACT;AAGnB;IADC,IAAA,2BAAS,EAAC,EAAE,MAAM,EAAE,IAAI,EAAE,CAAC;;iDACX"}
