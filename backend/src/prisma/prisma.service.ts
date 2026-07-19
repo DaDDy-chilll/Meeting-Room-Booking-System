@@ -187,12 +187,21 @@ export class PrismaService
 }
 
 function resolveRuntimeDatabaseUrl(): string {
-  const configuredUrl =
-    process.env.DATABASE_URL?.trim() ||
-    process.env.POSTGRES_PRISMA_URL?.trim() ||
-    process.env.POSTGRES_URL?.trim();
+  const candidates = [
+    ['DATABASE_URL', process.env.DATABASE_URL?.trim()],
+    ['POSTGRES_PRISMA_URL', process.env.POSTGRES_PRISMA_URL?.trim()],
+    ['POSTGRES_URL', process.env.POSTGRES_URL?.trim()],
+  ] as const;
+  const selectedCandidate = candidates.find((candidate) => !!candidate[1]);
+  const configuredUrl = selectedCandidate?.[1];
+  const selectedKey = selectedCandidate?.[0] ?? 'none';
   const isVercelServerless = process.env.VERCEL === '1';
   const isVercelProduction = process.env.VERCEL_ENV === 'production';
+
+  Logger.log(
+    `Resolved database env key=${selectedKey}`,
+    PrismaService.name,
+  );
 
   if (isVercelServerless && isVercelProduction) {
     if (!configuredUrl) {
@@ -203,7 +212,7 @@ function resolveRuntimeDatabaseUrl(): string {
 
     if (configuredUrl.startsWith('file:')) {
       throw new Error(
-        'SQLite file DATABASE_URL is not supported in Vercel production. Use managed Postgres.',
+        `SQLite file URL from ${selectedKey} is not supported in Vercel production. Use managed Postgres.`,
       );
     }
   }
