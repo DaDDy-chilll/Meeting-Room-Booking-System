@@ -21,8 +21,8 @@ export declare class RolesController {
         permissions: string[];
     }>;
     deleteRole(roleId: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;

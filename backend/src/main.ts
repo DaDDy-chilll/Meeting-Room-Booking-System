@@ -1,23 +1,19 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { Request, Response } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 
-async function bootstrap() {
+const logger = new Logger('Bootstrap');
+let cachedApp: INestApplication | null = null;
+
+async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
-  const logger = new Logger('Bootstrap');
-  const defaultCorsOrigins = [
-    'http://localhost:3000',
-    'https://meeting-room-booking-system-fwqg.vercel.app',
-  ];
 
   app.use(helmet());
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS ?? defaultCorsOrigins.join(','))
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter((origin) => origin.length > 0),
+    origin: '*',
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: false,
   });
@@ -31,9 +27,37 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new GlobalHttpExceptionFilter());
 
+  await app.init();
+  return app;
+}
+
+async function getOrCreateApp(): Promise<INestApplication> {
+  if (!cachedApp) {
+    cachedApp = await createApp();
+  }
+
+  return cachedApp;
+}
+
+export default async function handler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const app = await getOrCreateApp();
+  const instance = app.getHttpAdapter().getInstance() as unknown as (
+    req: Request,
+    res: Response,
+  ) => void;
+  instance(req, res);
+}
+
+async function bootstrap() {
+  const app = await getOrCreateApp();
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   logger.log(`Backend listening on port ${port}`);
 }
 
-void bootstrap();
+if (process.env.VERCEL !== '1') {
+  void bootstrap();
+}

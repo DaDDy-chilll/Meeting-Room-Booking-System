@@ -15,9 +15,9 @@ export declare class BookingsService {
         };
         id: string;
         createdAt: Date;
-        userId: string;
         startTime: Date;
         endTime: Date;
+        userId: string;
     }[]>;
     private transformBooking;
     private loadBookingWithUser;
@@ -38,9 +38,9 @@ export declare class BookingsService {
     deleteBooking(actor: Actor, bookingId: string): Promise<{
         id: string;
         createdAt: Date;
-        userId: string;
         startTime: Date;
         endTime: Date;
+        userId: string;
     }>;
     getBookingsGroupedByUser(): Promise<{
         user: {

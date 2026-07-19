@@ -32,9 +32,9 @@ export declare class UsersService {
         role: string;
     }>;
     deleteUser(id: string): Promise<{
-        id: string;
         name: string;
         roleId: string;
+        id: string;
     }>;
     private assertUserExists;
     private assertRoleExists;

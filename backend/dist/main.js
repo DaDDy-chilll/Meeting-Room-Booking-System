@@ -3,24 +3,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = handler;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const helmet_1 = __importDefault(require("helmet"));
 const app_module_1 = require("./app.module");
 const http_exception_filter_1 = require("./common/filters/http-exception.filter");
-async function bootstrap() {
+const logger = new common_1.Logger('Bootstrap');
+let cachedApp = null;
+async function createApp() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    const logger = new common_1.Logger('Bootstrap');
-    const defaultCorsOrigins = [
-        'http://localhost:3000',
-        'https://meeting-room-booking-system-fwqg.vercel.app',
-    ];
     app.use((0, helmet_1.default)());
     app.enableCors({
-        origin: (process.env.CORS_ORIGINS ?? defaultCorsOrigins.join(','))
-            .split(',')
-            .map((origin) => origin.trim())
-            .filter((origin) => origin.length > 0),
+        origin: '*',
         methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
         credentials: false,
     });
@@ -31,9 +26,27 @@ async function bootstrap() {
         transform: true,
     }));
     app.useGlobalFilters(new http_exception_filter_1.GlobalHttpExceptionFilter());
+    await app.init();
+    return app;
+}
+async function getOrCreateApp() {
+    if (!cachedApp) {
+        cachedApp = await createApp();
+    }
+    return cachedApp;
+}
+async function handler(req, res) {
+    const app = await getOrCreateApp();
+    const instance = app.getHttpAdapter().getInstance();
+    instance(req, res);
+}
+async function bootstrap() {
+    const app = await getOrCreateApp();
     const port = Number(process.env.PORT ?? 3001);
     await app.listen(port);
     logger.log(`Backend listening on port ${port}`);
 }
-void bootstrap();
+if (process.env.VERCEL !== '1') {
+    void bootstrap();
+}
 //# sourceMappingURL=main.js.map

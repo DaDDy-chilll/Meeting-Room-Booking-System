@@ -14,9 +14,9 @@ export declare class BookingsController {
         };
         id: string;
         createdAt: Date;
-        userId: string;
         startTime: Date;
         endTime: Date;
+        userId: string;
     }[]>;
     createBooking(actor: Actor, payload: CreateBookingDto): Promise<{
         user: {
@@ -35,9 +35,9 @@ export declare class BookingsController {
     deleteBooking(actor: Actor, id: string): Promise<{
         id: string;
         createdAt: Date;
-        userId: string;
         startTime: Date;
         endTime: Date;
+        userId: string;
     }>;
     groupedBookingsByUser(): Promise<{
         user: {
