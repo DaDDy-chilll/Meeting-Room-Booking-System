@@ -1,98 +1,110 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend Technical Documentation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS backend for the Meeting Room Booking System.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS 11 (modular architecture)
+- Prisma ORM
+- PostgreSQL in production (Neon/Vercel Postgres compatible)
+- SQLite fallback only for local development convenience
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Module Structure
 
-## Project setup
+- src/auth: actor discovery and request actor context
+- src/bookings: booking CRUD and booking analytics APIs
+- src/users: user management and role assignment
+- src/roles: dynamic role and permission management
+- src/common: guards, decorators, filters, interceptors, throttling
+- src/prisma: database connection and bootstrap seeding
 
-```bash
-$ npm install
-```
+## Auth and Authorization
 
-## Compile and run the project
+- Auth model: header-based actor context
+  - x-user-id: required for protected endpoints
+  - x-user-role: optional consistency check against persisted role
+- Authorization model: permission-based RBAC
+  - @Roles(...) decorator metadata
+  - PermissionsGuard validates required permissions against actor permissions
 
-```bash
-# development
-$ npm run start
+## Database and Seeding
 
-# watch mode
-$ npm run start:dev
+- Prisma datasource provider: postgresql
+- Schema includes User, Role, Permission, Booking
+- Seed command: npm run db:seed
+- Deterministic default records:
+  - roles: admin, owner, user
+  - users: System Admin, Room Owner, Standard User
 
-# production mode
-$ npm run start:prod
-```
+## Runtime Database Resolution
 
-## Run tests
+Prisma runtime chooses database URL from:
 
-```bash
-# unit tests
-$ npm run test
+1. DATABASE_URL
+2. POSTGRES_PRISMA_URL
+3. POSTGRES_URL
 
-# e2e tests
-$ npm run test:e2e
+On Vercel production, SQLite file URLs are blocked by default to prevent data loss from ephemeral storage.
 
-# test coverage
-$ npm run test:cov
-```
+Temporary override (demo only):
 
-## Deployment
+- ALLOW_SQLITE_IN_PRODUCTION=true
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+This override is unsafe for real production persistence.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## API Surface
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+Base path: /api
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+- GET /auth/actors
+- GET /auth/me
+- GET/POST/DELETE /bookings
+- GET /bookings/grouped/by-user
+- GET /bookings/summary/usage
+- GET/POST/PATCH/DELETE /users
+- GET/POST/PATCH/DELETE /roles
+- GET /roles/permissions/available
 
-## Resources
+## Security and Operational Controls
 
-Check out a few resources that may come in handy when working with NestJS:
+- helmet middleware enabled
+- CORS enabled (currently wildcard)
+- global ValidationPipe with whitelist + transform
+- global exception filter
+- global and route-level throttling
+- structured HTTP request logging interceptor
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Scripts
 
-## Support
+- npm run start:dev: start backend in watch mode
+- npm run build: generate Prisma client + compile Nest app
+- npm run db:push: sync Prisma schema to connected database
+- npm run db:seed: seed default roles/users/permissions
+- npm run test: run unit tests
+- npm run test:e2e: run e2e tests
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Production Deployment (Vercel)
 
-## Stay in touch
+Required environment variables:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- DATABASE_URL (recommended) or POSTGRES_PRISMA_URL
+- PORT
 
-## License
+Build pipeline:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. prisma generate
+2. prisma db push
+3. prisma db seed
+4. nest build
+
+Configured script:
+
+- npm run vercel-build
+
+## Local Development
+
+1. npm install
+2. set DATABASE_URL in .env (local Postgres recommended)
+3. npm run db:push
+4. npm run db:seed
+5. npm run start:dev

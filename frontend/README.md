@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend Technical Documentation
 
-## Getting Started
+Next.js frontend for the Meeting Room Booking System dashboard.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS 4
+
+## Application Responsibilities
+
+- Select active actor (mock auth via backend actor list)
+- Render permission-aware dashboard sections and actions
+- Manage bookings, users, roles, and analytics views
+- Surface backend validation and authorization errors to users
+
+## Core Frontend Structure
+
+- src/app/page.tsx
+	- Main dashboard UI and feature workflows
+	- Actor switching and data refresh orchestration
+- src/lib/api-client.ts
+	- Typed API client wrapper
+	- Header injection for x-user-id and x-user-role
+	- Unified ApiError shape
+- src/lib/types.ts
+	- Shared frontend type contracts
+- src/lib/logger.ts
+	- Centralized client logging helper
+
+## Runtime Configuration
+
+Required environment variable:
+
+- NEXT_PUBLIC_API_BASE_URL
+
+Example:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_API_BASE_URL=https://your-backend-host/api
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If omitted, fallback is http://localhost:3001/api.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Permission-Driven UX
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+UI behavior is controlled using actor permissions from /auth/actors.
 
-## Learn More
+Examples:
 
-To learn more about Next.js, take a look at the following resources:
+- booking:create controls create booking form submission
+- booking:view controls bookings table visibility/data load
+- user:* controls user management actions
+- role:* controls role management features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Error Handling
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- API failures are normalized through ApiError
+- Standardized notice banners are shown in the dashboard
+- 429 responses map to a specific rate-limit message
 
-## Deploy on Vercel
+## Logging and Clean Code Rules
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Frontend logging is centralized in src/lib/logger.ts
+- eslint rule blocks console.log usage
+- allowed console methods: info, warn, error
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Scripts
+
+- npm run dev: start local dev server
+- npm run build: create production build
+- npm run start: run built app
+- npm run lint: run ESLint checks
+
+## Local Development
+
+1. npm install
+2. set NEXT_PUBLIC_API_BASE_URL
+3. npm run dev
+
+## Deployment
+
+For Vercel:
+
+1. Set NEXT_PUBLIC_API_BASE_URL to the deployed backend /api URL
+2. Build and deploy
+
+Important: frontend and backend must point to the same environment pair (same stage/database) to avoid actor-id mismatches.
