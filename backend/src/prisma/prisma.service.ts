@@ -16,10 +16,12 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
+  private readonly runtimeDatabaseUrl: string;
 
   constructor() {
     const runtimeDatabaseUrl = resolveRuntimeDatabaseUrl();
     super({ datasources: { db: { url: runtimeDatabaseUrl } } });
+    this.runtimeDatabaseUrl = runtimeDatabaseUrl;
 
     if (process.env.VERCEL === '1' && runtimeDatabaseUrl.startsWith('file:/tmp/')) {
       // In Vercel serverless, /tmp is writable while /var/task is read-only.
@@ -32,6 +34,7 @@ export class PrismaService
 
   async onModuleInit(): Promise<void> {
     await this.$connect();
+    await this.ensureSqliteSchema();
     await this.seedDefaultRolesAndUsers();
   }
 
@@ -88,6 +91,74 @@ export class PrismaService
     await this.permission.createMany({
       data: permissions.map((action) => ({ roleId: role.id, action })),
     });
+  }
+
+  private async ensureSqliteSchema(): Promise<void> {
+    if (!this.runtimeDatabaseUrl.startsWith('file:')) {
+      return;
+    }
+
+    await this.$executeRawUnsafe('PRAGMA foreign_keys = ON;');
+
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Role" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL
+      );
+    `);
+
+    await this.$executeRawUnsafe(
+      'CREATE UNIQUE INDEX IF NOT EXISTS "Role_name_key" ON "Role"("name");',
+    );
+
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "User" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "roleId" TEXT NOT NULL,
+        CONSTRAINT "User_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      );
+    `);
+
+    await this.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "User_roleId_idx" ON "User"("roleId");',
+    );
+
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Permission" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "roleId" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        CONSTRAINT "Permission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await this.$executeRawUnsafe(
+      'CREATE UNIQUE INDEX IF NOT EXISTS "Permission_roleId_action_key" ON "Permission"("roleId", "action");',
+    );
+    await this.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "Permission_action_idx" ON "Permission"("action");',
+    );
+
+    await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Booking" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        "startTime" DATETIME NOT NULL,
+        "endTime" DATETIME NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Booking_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+
+    await this.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "Booking_userId_idx" ON "Booking"("userId");',
+    );
+    await this.$executeRawUnsafe(
+      'CREATE INDEX IF NOT EXISTS "Booking_startTime_endTime_idx" ON "Booking"("startTime", "endTime");',
+    );
   }
 }
 

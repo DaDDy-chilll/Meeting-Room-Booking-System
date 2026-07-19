@@ -16,15 +16,18 @@ const client_1 = require("@prisma/client");
 const permissions_constants_1 = require("../common/constants/permissions.constants");
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     logger = new common_1.Logger(PrismaService_1.name);
+    runtimeDatabaseUrl;
     constructor() {
         const runtimeDatabaseUrl = resolveRuntimeDatabaseUrl();
         super({ datasources: { db: { url: runtimeDatabaseUrl } } });
+        this.runtimeDatabaseUrl = runtimeDatabaseUrl;
         if (process.env.VERCEL === '1' && runtimeDatabaseUrl.startsWith('file:/tmp/')) {
             common_1.Logger.log(`Using temporary SQLite database at ${runtimeDatabaseUrl}`, PrismaService_1.name);
         }
     }
     async onModuleInit() {
         await this.$connect();
+        await this.ensureSqliteSchema();
         await this.seedDefaultRolesAndUsers();
     }
     async onModuleDestroy() {
@@ -70,6 +73,52 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
         await this.permission.createMany({
             data: permissions.map((action) => ({ roleId: role.id, action })),
         });
+    }
+    async ensureSqliteSchema() {
+        if (!this.runtimeDatabaseUrl.startsWith('file:')) {
+            return;
+        }
+        await this.$executeRawUnsafe('PRAGMA foreign_keys = ON;');
+        await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Role" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL
+      );
+    `);
+        await this.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Role_name_key" ON "Role"("name");');
+        await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "User" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "roleId" TEXT NOT NULL,
+        CONSTRAINT "User_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      );
+    `);
+        await this.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "User_roleId_idx" ON "User"("roleId");');
+        await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Permission" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "roleId" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        CONSTRAINT "Permission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+        await this.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Permission_roleId_action_key" ON "Permission"("roleId", "action");');
+        await this.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Permission_action_idx" ON "Permission"("action");');
+        await this.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Booking" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        "startTime" DATETIME NOT NULL,
+        "endTime" DATETIME NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Booking_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `);
+        await this.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Booking_userId_idx" ON "Booking"("userId");');
+        await this.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Booking_startTime_endTime_idx" ON "Booking"("startTime", "endTime");');
     }
 };
 exports.PrismaService = PrismaService;
