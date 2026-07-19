@@ -144,6 +144,15 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 function resolveRuntimeDatabaseUrl() {
     const configuredUrl = process.env.DATABASE_URL?.trim();
     const isVercelServerless = process.env.VERCEL === '1';
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isVercelServerless && isProduction) {
+        if (!configuredUrl) {
+            throw new Error('DATABASE_URL must be set to a persistent managed database in production.');
+        }
+        if (configuredUrl.startsWith('file:')) {
+            throw new Error('SQLite file DATABASE_URL is not supported in Vercel production. Use managed Postgres.');
+        }
+    }
     if (!configuredUrl) {
         return isVercelServerless ? 'file:/tmp/dev.db' : 'file:./dev.db';
     }
