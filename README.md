@@ -151,7 +151,9 @@ cd frontend && npm run lint && npm run build
 
 ## Deployment Notes
 
-- Backend (Render/Railway):
+- Backend (Render/Railway/Vercel):
+  - use a persistent managed database (for example Postgres on Neon/Supabase/Railway)
+  - do not use SQLite file URLs like `file:./dev.db` in serverless production
   - set `DATABASE_URL`, `PORT`, `CORS_ORIGINS`
   - run `npx prisma migrate deploy`
   - start with `npm run start:prod`
