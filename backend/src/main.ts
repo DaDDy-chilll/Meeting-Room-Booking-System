@@ -7,10 +7,14 @@ import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filte
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
+  const defaultCorsOrigins = [
+    'http://localhost:3000',
+    'https://meeting-room-booking-system-fwqg.vercel.app',
+  ];
 
   app.use(helmet());
   app.enableCors({
-    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
+    origin: (process.env.CORS_ORIGINS ?? defaultCorsOrigins.join(','))
       .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),

@@ -11,9 +11,13 @@ const http_exception_filter_1 = require("./common/filters/http-exception.filter"
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const logger = new common_1.Logger('Bootstrap');
+    const defaultCorsOrigins = [
+        'http://localhost:3000',
+        'https://meeting-room-booking-system-fwqg.vercel.app',
+    ];
     app.use((0, helmet_1.default)());
     app.enableCors({
-        origin: (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
+        origin: (process.env.CORS_ORIGINS ?? defaultCorsOrigins.join(','))
             .split(',')
             .map((origin) => origin.trim())
             .filter((origin) => origin.length > 0),
