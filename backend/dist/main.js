@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = handler;
+exports.handler = handler;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const helmet_1 = __importDefault(require("helmet"));
@@ -40,13 +40,17 @@ async function handler(req, res) {
     const instance = app.getHttpAdapter().getInstance();
     instance(req, res);
 }
+exports.default = handler;
 async function bootstrap() {
     const app = await getOrCreateApp();
     const port = Number(process.env.PORT ?? 3001);
     await app.listen(port);
     logger.log(`Backend listening on port ${port}`);
 }
-if (process.env.VERCEL !== '1') {
+const isMainModule = typeof require !== 'undefined' &&
+    typeof module !== 'undefined' &&
+    require.main === module;
+if (isMainModule) {
     void bootstrap();
 }
 //# sourceMappingURL=main.js.map

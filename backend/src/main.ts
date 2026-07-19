@@ -39,10 +39,7 @@ async function getOrCreateApp(): Promise<INestApplication> {
   return cachedApp;
 }
 
-export default async function handler(
-  req: Request,
-  res: Response,
-): Promise<void> {
+export async function handler(req: Request, res: Response): Promise<void> {
   const app = await getOrCreateApp();
   const instance = app.getHttpAdapter().getInstance() as unknown as (
     req: Request,
@@ -51,6 +48,8 @@ export default async function handler(
   instance(req, res);
 }
 
+export default handler;
+
 async function bootstrap() {
   const app = await getOrCreateApp();
   const port = Number(process.env.PORT ?? 3001);
@@ -58,6 +57,11 @@ async function bootstrap() {
   logger.log(`Backend listening on port ${port}`);
 }
 
-if (process.env.VERCEL !== '1') {
+const isMainModule =
+  typeof require !== 'undefined' &&
+  typeof module !== 'undefined' &&
+  require.main === module;
+
+if (isMainModule) {
   void bootstrap();
 }
