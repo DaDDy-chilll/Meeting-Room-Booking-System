@@ -17,6 +17,19 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
 
+  constructor() {
+    const runtimeDatabaseUrl = resolveRuntimeDatabaseUrl();
+    super({ datasources: { db: { url: runtimeDatabaseUrl } } });
+
+    if (process.env.VERCEL === '1' && runtimeDatabaseUrl.startsWith('file:/tmp/')) {
+      // In Vercel serverless, /tmp is writable while /var/task is read-only.
+      Logger.log(
+        `Using temporary SQLite database at ${runtimeDatabaseUrl}`,
+        PrismaService.name,
+      );
+    }
+  }
+
   async onModuleInit(): Promise<void> {
     await this.$connect();
     await this.seedDefaultRolesAndUsers();
@@ -76,4 +89,29 @@ export class PrismaService
       data: permissions.map((action) => ({ roleId: role.id, action })),
     });
   }
+}
+
+function resolveRuntimeDatabaseUrl(): string {
+  const configuredUrl = process.env.DATABASE_URL?.trim();
+  const isVercelServerless = process.env.VERCEL === '1';
+
+  if (!configuredUrl) {
+    return isVercelServerless ? 'file:/tmp/dev.db' : 'file:./dev.db';
+  }
+
+  if (!isVercelServerless || !configuredUrl.startsWith('file:')) {
+    return configuredUrl;
+  }
+
+  const sqlitePath = configuredUrl.slice('file:'.length);
+  if (sqlitePath.startsWith('/tmp/')) {
+    return configuredUrl;
+  }
+
+  if (sqlitePath.startsWith('/')) {
+    return configuredUrl;
+  }
+
+  const normalizedPath = sqlitePath.replace(/^\.\//, '');
+  return `file:/tmp/${normalizedPath || 'dev.db'}`;
 }
